@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eaglercraft Controller Mapper</title>
+    <style>
+        :root {
+            --bg: #121212;
+            --surface: #1e1e1e;
+            --primary: #bb86fc;
+            --secondary: #03dac6;
+            --text: #ffffff;
+            --border: #333;
+            --highlight: #3700b3;
+            --warning: #ffb74d;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 { color: var(--primary); margin-bottom: 5px; }
+        p.subtitle { color: #aaa; margin-bottom: 20px; }
+        
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            max-width: 1200px;
+            width: 100%;
+        }
+        .panel {
+            background: var(--surface);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        /* Mapping Grid */
+        .mapping-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .mapping-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #252525;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #333;
+            transition: 0.2s;
+        }
+        .mapping-item.listening {
+            border-color: var(--secondary);
+            background: #2a3b3a;
+            box-shadow: 0 0 8px rgba(3, 218, 198, 0.2);
+        }
+        .action-label { font-weight: bold; font-size: 0.9em; }
+        
+        .btn-display {
+            background: #111;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #888;
+            min-width: 80px;
+            text-align: center;
+            margin: 0 10px;
+            border: 1px solid #444;
+        }
+        .btn-display.set { color: var(--primary); border-color: var(--primary); }
+
+        .map-btn {
+            background: #444;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+        .map-btn:hover { background: #555; }
+        .listening .map-btn { background: var(--secondary); color: black; font-weight: bold; content: "Press..."; }
+
+        /* Output Area */
+        textarea {
+            width: 100%;
+            height: 300px;
+            background: #151515;
+            color: #0f0;
+            font-family: monospace;
+            border: 1px solid var(--border);
+            padding: 10px;
+            margin-top: 15px;
+            border-radius: 4px;
+            resize: vertical;
+        }
+        button.big-btn {
+            background: var(--primary);
+            color: black;
+            font-weight: bold;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.1em;
+            width: 100%;
+            margin-top: 10px;
+            transition: 0.2s;
+        }
+        button.big-btn:hover { opacity: 0.9; transform: scale(1.01); }
+
+        .status-bar {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #1a1a1a;
+            border-radius: 4px;
+            border: 1px solid #333;
+            color: #aaa;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .status-indicator {
+            width: 10px; height: 10px; border-radius: 50%; background: #555;
+        }
+        .status-indicator.active { background: #0f0; box-shadow: 0 0 5px #0f0; }
+
+        /* Instructions Styling */
+        .instructions {
+            background: #252525;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--warning);
+        }
+        .instructions h3 { margin-top: 0; color: var(--warning); font-size: 1.1em;}
+        .instructions ol { margin: 0; padding-left: 20px; color: #ccc; line-height: 1.6; }
+        .instructions li { margin-bottom: 5px; }
+        .code-snippet { background: #111; padding: 2px 6px; border-radius: 4px; font-family: monospace; color: var(--secondary); }
+
+    </style>
+</head>
+<body>
+
+    <h1>🎮 Eaglercraft Controller Mapper</h1>
+    <p class="subtitle">Click "Map", press a button on your controller, then generate the script.</p>
+
+    <div class="status-bar">
+        <div id="connection-dot" class="status-indicator"></div>
+        <span id="connection-text">Waiting for controller... (Press any button to wake it up)</span>
+        <span id="last-press" style="margin-left: auto; color: #fff;"></span>
+    </div>
+
+    <div class="container">
+        <div class="panel">
+            <h2>1. Map Controls</h2>
+            <div id="mapping-container" class="mapping-list">
+                </div>
+            
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #333;">
+                <label style="font-weight:bold; color:#ccc;">Sensitivity:</label>
+                <input type="number" id="sensitivity" value="20" style="width: 50px; background: #333; color: white; border: 1px solid #555; padding: 5px;">
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>2. Get Script</h2>
+            
+            <div class="instructions">
+                <h3>📖 How to install into Eaglercraft</h3>
+                <ol>
+                    <li>Open your Eaglercraft game tab.</li>
+                    <li>Press <b>F12</b> (or Right Click > Inspect) to open DevTools.</li>
+                    <li>Click the <b>Console</b> tab at the top.</li>
+                    <li>⚠️ <b>CRITICAL STEP:</b> Look for the dropdown menu near the top of the Console (usually says <span class="code-snippet">top</span>). Click it and select the game frame (e.g., <span class="code-snippet">1.8.8-wasm</span>, <span class="code-snippet">1.8.8</span>, <span class="code-snippet">iframe</span>, or <span class="code-snippet">eaglercraft</span>).</li>
+                    <li>Paste the script below and press <b>Enter</b>.</li>
+                    <li>Press a button on your controller to connect!</li>
+                </ol>
+            </div>
+
+            <button class="big-btn" onclick="generateScript()">⚡ Generate Script</button>
+            <textarea id="output" readonly placeholder="// Script will appear here..."></textarea>
+            <button class="big-btn" style="background: var(--secondary); margin-top:10px;" onclick="copyToClipboard()">📋 Copy to Clipboard</button>
+        </div>
+    </div>
+
+<script>
+    // --- CONFIGURATION DATA ---
+    const actions = [
+        { id: "jump", name: "Jump", type: "key", val: " ", mode: "hold", currentBtn: 0 },
+        { id: "sneak", name: "Sneak", type: "key", val: "shift", mode: "hold", currentBtn: 1 },
+        { id: "inventory", name: "Inventory", type: "key", val: "e", mode: "toggle", currentBtn: 2 },
+        { id: "attack", name: "Attack / Break", type: "mouse", val: 0, mode: "hold", currentBtn: 7 },
+        { id: "place", name: "Place / Use", type: "mouse", val: 2, mode: "hold", currentBtn: 6 },
+        
+        { id: "drop", name: "Drop Item", type: "key", val: "q", mode: "toggle", currentBtn: -1 }, 
+        
+        // --- ADDED CHAT ---
+        { id: "chat", name: "Open Chat (T)", type: "key", val: "t", mode: "toggle", currentBtn: -1 },
+
+        { id: "hotbar_left", name: "Hotbar Left", type: "wheel", val: -100, mode: "toggle", currentBtn: 4 },
+        { id: "hotbar_right", name: "Hotbar Right", type: "wheel", val: 100, mode: "toggle", currentBtn: 5 },
+        { id: "sprint", name: "Sprint", type: "key", val: "r", mode: "hold", currentBtn: 10 },
+        { id: "pause", name: "Pause (Esc)", type: "key", val: "esc", mode: "toggle", currentBtn: 9 },
+        { id: "perspective", name: "Camera (F5)", type: "key", val: "f5", mode: "toggle", currentBtn: -1 },
+        { id: "list", name: "Player List", type: "key", val: "tab", mode: "hold", currentBtn: 8 },
+        { id: "pick", name: "Pick Block", type: "mouse", val: 1, mode: "hold", currentBtn: 11 }
+    ];
+
+    // --- UI BUILDER ---
+    const container = document.getElementById('mapping-container');
+    let listeningForAction = null; 
+
+    function renderUI() {
+        container.innerHTML = "";
+        actions.forEach(act => {
+            const div = document.createElement('div');
+            div.className = 'mapping-item';
+            div.id = `row-${act.id}`;
+
+            const label = document.createElement('span');
+            label.className = 'action-label';
+            label.innerText = act.name;
+
+            const rightSide = document.createElement('div');
+            rightSide.style.display = 'flex';
+            rightSide.style.alignItems = 'center';
+
+            const display = document.createElement('div');
+            display.className = `btn-display ${act.currentBtn !== -1 ? 'set' : ''}`;
+            display.innerText = act.currentBtn === -1 ? "Unbound" : `Btn ${act.currentBtn}`;
+            
+            const btn = document.createElement('button');
+            btn.className = 'map-btn';
+            btn.innerText = "Map";
+            btn.onclick = () => startListening(act.id);
+
+            rightSide.appendChild(display);
+            rightSide.appendChild(btn);
+            div.appendChild(label);
+            div.appendChild(rightSide);
+            container.appendChild(div);
+        });
+    }
+
+    // --- INPUT HANDLING ---
+    function startListening(actionId) {
+        document.querySelectorAll('.mapping-item').forEach(el => el.classList.remove('listening'));
+        const row = document.getElementById(`row-${actionId}`);
+        if(row) row.classList.add('listening');
+        const btn = row.querySelector('.map-btn');
+        btn.innerText = "Press...";
+        listeningForAction = actionId;
+    }
+
+    let lastButtons = new Array(16).fill(false);
+
+    function gameLoop() {
+        const gps = navigator.getGamepads();
+        const gp = gps[0] || gps[1] || gps[2] || gps[3];
+
+        if (gp) {
+            document.getElementById('connection-dot').className = "status-indicator active";
+            document.getElementById('connection-text').innerText = `Connected: ${gp.id}`;
+
+            gp.buttons.forEach((btn, index) => {
+                if (btn.pressed && !lastButtons[index]) {
+                    handleButtonPress(index);
+                }
+                lastButtons[index] = btn.pressed;
+            });
+        } else {
+            document.getElementById('connection-dot').className = "status-indicator";
+            document.getElementById('connection-text').innerText = "Waiting for controller...";
+        }
+        requestAnimationFrame(gameLoop);
+    }
+
+    function handleButtonPress(btnIndex) {
+        document.getElementById('last-press').innerText = `Last Input: Button ${btnIndex}`;
+
+        if (listeningForAction) {
+            const act = actions.find(a => a.id === listeningForAction);
+            if (act) {
+                act.currentBtn = btnIndex;
+                listeningForAction = null;
+                renderUI(); 
+            }
+        }
+    }
+
+    // --- SCRIPT GENERATOR ---
+    function generateScript() {
+        let sensitivity = document.getElementById('sensitivity').value;
+        let logicCode = "";
+        let lockVars = "";
+
+        for (let i = 0; i < 16; i++) {
+            const act = actions.find(a => a.currentBtn === i);
+
+            if (act) {
+                logicCode += `            // Button ${i} -> ${act.name}\n`;
+
+                if (act.mode === "hold") {
+                    if (act.type === "key") {
+                        logicCode += `            if(gp.buttons[${i}].pressed) keyEvent("${act.val}", "keydown"); else keyEvent("${act.val}", "keyup");\n`;
+                    } else if (act.type === "mouse") {
+                        logicCode += `            if(gp.buttons[${i}].pressed) mouseEvent(${act.val}, "mousedown"); else mouseEvent(${act.val}, "mouseup");\n`;
+                    }
+                } else if (act.mode === "toggle") {
+                    lockVars += `    var lock_${i} = false;\n`;
+                    logicCode += `            if(gp.buttons[${i}].pressed) {\n`;
+                    logicCode += `                if(!lock_${i}) {\n`;
+                    if (act.type === "key") logicCode += `                    keyEvent("${act.val}", "keydown");\n`;
+                    if (act.type === "wheel") logicCode += `                    wheelEvent(${act.val});\n`;
+                    logicCode += `                    lock_${i} = true;\n`;
+                    logicCode += `                }\n`;
+                    logicCode += `            } else {\n`;
+                    logicCode += `                if(lock_${i}) {\n`;
+                    if (act.type === "key") logicCode += `                    keyEvent("${act.val}", "keyup");\n`;
+                    logicCode += `                    lock_${i} = false;\n`;
+                    logicCode += `                }\n`;
+                    logicCode += `            }\n`;
+                }
+            }
+        }
+
+        const finalScript = `(function() {
+    // 1. Find the canvas
+    var canvas = document.querySelector('canvas');
+    if(!canvas) { 
+        console.error("❌ ERROR: Canvas not found! You are in the wrong Frame."); 
+        console.warn("👉 TIP: Use the dropdown menu in the Console tab to select '1.8.8-wasm' or 'iframe'.");
+        return; 
+    }
+    console.log("✅ Canvas Found! Injecting Controller Logic...");
+
+    // 2. Setup Variables
+    var clientWindow = window;
+    var controllerIndex = null;
+    
+    // --- LOCK VARIABLES ---
+${lockVars}
+    // ----------------------
+
+    // Helpers
+    String.prototype.toKeyCode = function () {
+        const keys = { "w": 87, "a": 65, "s": 83, "d": 68, " ": 32, "shift": 16, "e": 69, "r": 82, "f5": 116, "q": 81, "t": 84, "esc": 27, "tab": 9 };
+        return keys[this.toLowerCase()] || 0;
+    }
+    function keyEvent(key, type) {
+        let code = key.toKeyCode();
+        canvas.dispatchEvent(new KeyboardEvent(type, { key: key, keyCode: code, which: code, bubbles: true }));
+    }
+    function mouseEvent(btn, type) {
+        canvas.dispatchEvent(new PointerEvent(type, { button: btn, buttons: btn ? 1 : 0, bubbles: true, pointerType: 'mouse' }));
+    }
+    function wheelEvent(direction) {
+        canvas.dispatchEvent(new WheelEvent("wheel", { deltaY: direction, bubbles: true }));
+    }
+    
+    // 3. AUTO-DETECT CONTROLLER
+    function scanGamepads() {
+        var gps = navigator.getGamepads();
+        for(let i=0; i<gps.length; i++) {
+            if(gps[i] && gps[i].connected) {
+                controllerIndex = i;
+                console.log("🎮 Controller FOUND at index " + i + ": " + gps[i].id);
+                return;
+            }
+        }
+    }
+    
+    // 4. Input Loop
+    function update() {
+        if(controllerIndex === null) scanGamepads(); 
+        
+        var gp = navigator.getGamepads()[controllerIndex];
+        if(gp) {
+            // --- JOYSTICKS (Fixed Standard Mapping) ---
+            var x = gp.axes[0], y = gp.axes[1];
+            if(y < -0.5) keyEvent("w", "keydown"); else keyEvent("w", "keyup");
+            if(y > 0.5)  keyEvent("s", "keydown"); else keyEvent("s", "keyup");
+            if(x < -0.5) keyEvent("a", "keydown"); else keyEvent("a", "keyup");
+            if(x > 0.5)  keyEvent("d", "keydown"); else keyEvent("d", "keyup");
+
+            // --- CUSTOM BUTTON MAPPING ---
+${logicCode}
+            // -----------------------------
+
+            // --- CAMERA ---
+            if(Math.abs(gp.axes[2]) > 0.2 || Math.abs(gp.axes[3]) > 0.2) {
+                canvas.dispatchEvent(new MouseEvent("mousemove", {
+                    movementX: gp.axes[2] * ${sensitivity}, 
+                    movementY: gp.axes[3] * ${sensitivity},
+                    bubbles: true
+                }));
+            }
+        }
+        requestAnimationFrame(update);
+    }
+    
+    update(); 
+    console.log("✅ Custom Controller Script Loaded!");
+})();`;
+
+        document.getElementById('output').value = finalScript;
+    }
+
+    function copyToClipboard() {
+        const copyText = document.getElementById("output");
+        copyText.select();
+        document.execCommand("copy");
+        alert("Script copied!");
+    }
+
+    // Initialize
+    renderUI();
+    gameLoop();
+
+</script>
+
+</body>
+</html>

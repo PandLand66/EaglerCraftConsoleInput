@@ -203,15 +203,16 @@
         { id: "sneak", name: "Sneak", type: "key", val: "shift", mode: "hold", currentBtn: 1 },
         { id: "inventory", name: "Inventory", type: "key", val: "e", mode: "toggle", currentBtn: 2 },
         { id: "attack", name: "Attack / Break", type: "mouse", val: 0, mode: "hold", currentBtn: 7 },
-        
-        // --- FIXED: Updated label to include Chests ---
         { id: "place", name: "Place / Use / Chest", type: "mouse", val: 2, mode: "hold", currentBtn: 6 },
         
         { id: "drop", name: "Drop Item", type: "key", val: "q", mode: "toggle", currentBtn: -1 }, 
+        
         { id: "chat", name: "Open Chat (T)", type: "key", val: "t", mode: "toggle", currentBtn: -1 },
 
-        { id: "hotbar_left", name: "Hotbar Left", type: "wheel", val: -100, mode: "toggle", currentBtn: 4 },
-        { id: "hotbar_right", name: "Hotbar Right", type: "wheel", val: 100, mode: "toggle", currentBtn: 5 },
+        // --- FIXED: Reduced Scroll Amount from 100 to 50 ---
+        { id: "hotbar_left", name: "Hotbar Left", type: "wheel", val: -50, mode: "toggle", currentBtn: 4 },
+        { id: "hotbar_right", name: "Hotbar Right", type: "wheel", val: 50, mode: "toggle", currentBtn: 5 },
+        
         { id: "sprint", name: "Sprint", type: "key", val: "r", mode: "hold", currentBtn: 10 },
         { id: "pause", name: "Pause (Esc)", type: "key", val: "esc", mode: "toggle", currentBtn: 9 },
         { id: "perspective", name: "Camera (F5)", type: "key", val: "f5", mode: "toggle", currentBtn: -1 },
@@ -337,8 +338,6 @@
             }
         }
 
-        // --- FIXED: mouseEvent logic was sending Left Click signal for Right Click ---
-        // Now it correctly calculates the 'buttons' bitmask
         const finalScript = `(function() {
     // 1. Find the canvas
     var canvas = document.querySelector('canvas');

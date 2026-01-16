@@ -184,7 +184,7 @@
                     <li>Open your Eaglercraft game tab.</li>
                     <li>Press <b>F12</b> (or Right Click > Inspect) to open DevTools.</li>
                     <li>Click the <b>Console</b> tab at the top.</li>
-                    <li>⚠️ <b>CRITICAL STEP:</b> Look for the dropdown menu near the top of the Console (usually says <span class="code-snippet">top</span>). Click it and select the game frame (e.g., <span class="code-snippet">1.8.8-wasm</span>, <span class="code-snippet">1.8.8</span>, <span class="code-snippet">iframe</span>, or <span class="code-snippet">eaglercraft</span>).</li>
+                    <li>⚠️ <b>CRITICAL STEP:</b> Look for the dropdown menu near the top of the Console (usually says <span class="code-snippet">top</span>). Click it and select the game frame (e.g., <span class="code-snippet">1.8.8-wasm</span>, <span class="code-snippet">iframe</span>, or <span class="code-snippet">eaglercraft</span>).</li>
                     <li>Paste the script below and press <b>Enter</b>.</li>
                     <li>Press a button on your controller to connect!</li>
                 </ol>
@@ -203,11 +203,11 @@
         { id: "sneak", name: "Sneak", type: "key", val: "shift", mode: "hold", currentBtn: 1 },
         { id: "inventory", name: "Inventory", type: "key", val: "e", mode: "toggle", currentBtn: 2 },
         { id: "attack", name: "Attack / Break", type: "mouse", val: 0, mode: "hold", currentBtn: 7 },
-        { id: "place", name: "Place / Use", type: "mouse", val: 2, mode: "hold", currentBtn: 6 },
+        
+        // --- FIXED: Updated label to include Chests ---
+        { id: "place", name: "Place / Use / Chest", type: "mouse", val: 2, mode: "hold", currentBtn: 6 },
         
         { id: "drop", name: "Drop Item", type: "key", val: "q", mode: "toggle", currentBtn: -1 }, 
-        
-        // --- ADDED CHAT ---
         { id: "chat", name: "Open Chat (T)", type: "key", val: "t", mode: "toggle", currentBtn: -1 },
 
         { id: "hotbar_left", name: "Hotbar Left", type: "wheel", val: -100, mode: "toggle", currentBtn: 4 },
@@ -337,6 +337,8 @@
             }
         }
 
+        // --- FIXED: mouseEvent logic was sending Left Click signal for Right Click ---
+        // Now it correctly calculates the 'buttons' bitmask
         const finalScript = `(function() {
     // 1. Find the canvas
     var canvas = document.querySelector('canvas');
@@ -365,7 +367,14 @@ ${lockVars}
         canvas.dispatchEvent(new KeyboardEvent(type, { key: key, keyCode: code, which: code, bubbles: true }));
     }
     function mouseEvent(btn, type) {
-        canvas.dispatchEvent(new PointerEvent(type, { button: btn, buttons: btn ? 1 : 0, bubbles: true, pointerType: 'mouse' }));
+        // Corrected Bitmask: Left(0)=1, Right(2)=2, Middle(1)=4
+        var mask = 0;
+        if(type === "mousedown") {
+            if(btn === 0) mask = 1;
+            else if(btn === 2) mask = 2;
+            else if(btn === 1) mask = 4;
+        }
+        canvas.dispatchEvent(new PointerEvent(type, { button: btn, buttons: mask, bubbles: true, pointerType: 'mouse' }));
     }
     function wheelEvent(direction) {
         canvas.dispatchEvent(new WheelEvent("wheel", { deltaY: direction, bubbles: true }));
